@@ -1,5 +1,19 @@
 <odoo>
   <data>
+
+<record id="mattermost_config_params" model="ir.config_parameter">
+    <field name="key">mattermost_url</field>
+    <field name="value">https://example.com/mattermost</field>
+    <field name="description">Mattermost URL</field>
+</record>
+
+<record id="bearer_token_config_params" model="ir.config_parameter">
+    <field name="key">mattermost_bearer_token</field>
+    <field name="value">your-bearer-token</field>
+    <field name="description">Mattermost Bearer Token</field>
+</record>
+
+
     <!-- explicit list view definition -->
 <!--
     <record model="ir.ui.view" id="odoo_mattermost.list">

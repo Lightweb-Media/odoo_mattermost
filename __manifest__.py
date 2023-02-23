@@ -20,7 +20,7 @@
     'version': '0.1',
 
     # any module necessary for this one to work correctly
-    'depends': ['base', 'project', 'mail'],
+    'depends': ['base', 'project', 'mail', 'contacts'],
 
     # always loaded
     'data': [
@@ -29,6 +29,7 @@
         'views/templates.xml',
     ],
     # only loaded in demonstration mode
+    #https://pypi.org/project/mattermost/
     'demo': [
         'demo/demo.xml',
     ],
