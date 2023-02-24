@@ -32,6 +32,7 @@ class odoo_mattermost_project(models.Model):
     
 
     def create_channel(self):
+        self.ensure_one()   
         if self.mm_channel_id:
             return
         else:
@@ -42,8 +43,12 @@ class odoo_mattermost_project(models.Model):
             mm_obj._logout()
     
 
-  
+    def sync_user(self):
+        self.ensure_one()
+        mm_users = self.userlist()
+    #    odoo_users = self.env['res.users'].search([ ('active', '=', True) ])])
 
+        
         
 
 
