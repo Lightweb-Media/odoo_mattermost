@@ -1,18 +1,43 @@
 <odoo>
   <data>
-
-<record id="mattermost_config_params" model="ir.config_parameter">
+<!--
+<record id="mattermost.config_params" model="ir.config_parameter">
     <field name="key">mattermost_url</field>
     <field name="value">https://example.com/mattermost</field>
     <field name="description">Mattermost URL</field>
 </record>
-
-<record id="bearer_token_config_params" model="ir.config_parameter">
-    <field name="key">mattermost_bearer_token</field>
-    <field name="value">your-bearer-token</field>
-    <field name="description">Mattermost Bearer Token</field>
+-->
+<!--
+<record id="action_project_my_action" model="ir.actions.server">
+    <field name="name">Add Mattermost Channel</field>
+    <field name="model_id" ref="project.model_project_project"/>
+    <field name="state">code</field>
+    <field name="code">self.create_channel()</field>
+</record>
+-->
+<record id="action_project_create_channel" model="ir.actions.server">
+    <field name="name">Add Mattermost Channel</field>
+    <field name="model_id" ref="project.model_project_project"/>
+    <field name="state">code</field>
+    <field name="code">model.create_channel()</field>
 </record>
 
+
+
+ <!---->
+<record id="view_project_form" model="ir.ui.view">
+    <field name="name">project.form</field>
+    <field name="model">project.project</field>
+    <field name="inherit_id" ref="project.edit_project"/>
+    <field name="arch" type="xml">
+        <xpath expr="//header" position="inside">
+            <button name="%(action_project_create_channel)d"
+                    string="create Mattermost Channel"
+                    type="action"
+                    class="oe_highlight"/>
+        </xpath>
+    </field>
+</record>
 
     <!-- explicit list view definition -->
 <!--
