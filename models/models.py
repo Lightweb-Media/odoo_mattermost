@@ -6,12 +6,13 @@ import mattermost
 class odoo_mattermost(models.Model):
     _name = 'odoo_mattermost.config'
     _description = 'odoo_mattermost.odoo_mattermost'
-    
     def _login(self):
-        mattermost_url = self.env['ir.config_parameter'].sudo().get_param('mattermost_url')
+        mattermost_url = self.env['ir.config_parameter'].sudo().get_param('mattermost_url') 
         bearer_token = self.env['ir.config_parameter'].sudo().get_param('mattermost_bearer_token')
         self.mm = mattermost.MMApi(mattermost_url)
-        self.mm.login(bearer=bearer_token)
+        self.mm.login(bearer=self.bearer_token)
+  #  def _login(self):
+   #     self.mm.login(bearer=self.bearer_token)
   
     def _get_user_id(self, user_name):
         return self.mm.get_user_id(user_name)
@@ -31,22 +32,24 @@ class odoo_mattermost_project(models.Model):
     
 
     def create_channel(self):
-        self._create_channel(self.name)
-        self.mm_channel_id = self._get_user_id(self.name)
-        self._logout()
+        if self.mm_channel_id:
+            return
+        else:
+            mm_obj = self.env['odoo_mattermost.config']
+            mm_obj._login()
+            mm_obj._create_channel(self.name)
+            # set status, users, rights, basic settings to mattermost channel
+            mm_obj._logout()
+    
 
   
-    def _create_channel(self, channel_name):
-        mm_obj = self.env['odoo_mattermost.config']
-        mm_obj._login()
-        self._create_channel(self.name)
-        self.mm_channel_id = self._get_user_id(self.name)
-        self._logout()
+
+        
 
 
-#class odoo_mattermost(models.Model):
-#   _inherit = 'res.partner'
-#   mm_user_id = fields.Char(string='Mattermost ID', required=False)
+class odoo_mattermost(models.Model):
+   _inherit = 'res.partner'
+   mm_user_id = fields.Char(string='Mattermost ID', required=False)
 
 
 
