@@ -2,6 +2,7 @@
 
 from odoo import models, fields, api
 import logging
+from datetime import datetime
 import mattermost
 _logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class odoo_mattermost(models.Model):
         return self.env['ir.config_parameter'].sudo().get_param('mattermost_token')
     
     def _get_mm_team_id(self):
-        return 'kksq3nwy6tbztei781y73odf8o'
+        return '4cww6pn4ft8wurd6y1zbpfibth'
         return self.env['ir.config_parameter'].sudo().get_param('mattermost_team_id')  
 
     def _login(self):
@@ -30,45 +31,34 @@ class odoo_mattermost(models.Model):
         return mm
 
     def prepare_name(self, name):
-        return name
-       #
-       #  return  "".join(ch for ch in name if ch.isalnum())
-      #  return name.replace(' ', '_').replace('.', '_')
+        return  "".join(ch for ch in name if ch.isalnum())
     
-    def _create_user(self, email, name):
-        mm = self._login()
-        mm_user = mm.create_user(email, self.prepare_name(name))
-        self.revoke_user_session()
-        return mm_user
+  
 
-    def get_mm_user_by_email(self, email):
-        pass
 
-    def create_msg(self, msg, channel_id):
-        mm = self._login()
-        _logger.debug (channel_id)
-        mm.create_post(channel_id, msg)
-        mm.revoke_user_session()    
-
- #   @api.model
- #   def _get_user_id(self, user_name):
- #       return self.mm.get_user_id(user_name)
-
- 
- #   def _create_channel(self, channel_name):
- #       self.mm.create_channel(channel_name)
-
- #   def _logout(self):
- #       self.mm.revoke_user_session()
 
 class odoo_mattermost_partner(models.Model):
     #get_users (in_team=None, not_in_team=None, in_channel=None, not_in_channel=None, group_constrained=None, without_team=None, sort=None, **kwargs)
     _inherit = 'res.partner'
     mm_user_id = fields.Char(string='MM User ID', required=False)
 
-    def mm_create_user(self):
+    @api.model
+    def mm_create_user(self, ids):
+        print (ids)
+        for id in ids:
+            partner_id = self.env['res.partner'].browse(id)
         mm_obj = self.env['odoo_mattermost.config']._login()
-       # mm_user = mm_obj.create_user(self.email, self.name)
+        
+        name = partner_id.name.replace(" ", "")
+        
+        data = {
+            'email': partner_id.email,
+            'username': name,
+            "auth_data": "cn=test1234,ou=users,dc=ldap,dc=goauthentik,dc=io",
+            "auth_service": "saml",
+        }
+        mm_user = mm_obj._post("/v4/users",data=data)
+      
         self.mm_user_id = mm_user['id']
         mm_obj.revoke_user_session()
 
@@ -78,26 +68,104 @@ class odoo_mattermost_project(models.Model):
     _inherit = 'project.project'
     
     mm_channel_id = fields.Char(string='Channel ID', required=False)
-    
-    @api.onchange('allowed_internal_user_ids')
-    def onchange_allowed_internal_user_ids(self):
-        return self.allowed_internal_user_ids
 
-
-
-    @api.onchange('user_id')
-    def onchange_user_id(self):
-        _logger.debug('onchange a %s with vals ', self.user_id)
-      
+    def remove_all_channel_user(self, channel_id):
+        mm_obj = self.env['odoo_mattermost.config']._login()
+        users = mm_obj.get_channel_members(channel_id)
+        for user in users:
+            mm_obj.remove_user_from_channel(channel_id, user['user_id'])
+        mm_obj.revoke_user_session()
         
-        # Do something with the project or user
+    
+
+    def write(self, vals):
+        result = super().write(vals)
+       
+        if 'allowed_internal_user_ids' in vals and self.mm_channel_id:
+                
+                
+                mm_obj = self.env['odoo_mattermost.config']._login()
+                new_allowed_users = self.allowed_internal_user_ids
+                self.remove_all_channel_user(self.mm_channel_id)
+                
+                for user in new_allowed_users:
+                    if user.mm_user_id:
+                        mm_obj.add_user_to_channel(self.mm_channel_id, user.mm_user_id)
+                mm_obj.revoke_user_session()
+        
+        return result
+
+    @api.onchange('stage_id')
+    def _on_state_change(self):
+        if self.mm_channel_id:
+            if self.user_id  and self.user_id.mm_user_id:
+    
+                msg = f"{self.user_id.name} updated {self.name} stage to:  {self.stage_id.name}"
+                self.env['odoo_mattermost.config'].create_msg(msg, self.project_id.mm_channel_id)
+            pass
+
+   # @api.model
+   # def create(self, vals):
+   #     project = super().create(vals)
+        # Your code here
+   #     return project
+
+    @api.onchange('active')
+    def _on_active_change(self):
+       
+        if self.name:
+            if self.project_id.mm_channel_id:
+                if not self.active:
+                    msg = f"{self.user_id.name} archived {self.name}"
+                    self.env['odoo_mattermost.config'].create_msg(msg, self.project_id.mm_channel_id)
+                    
+                    payload = {
+                        
+                        }
+                    
+                    mm_obj = self.env['odoo_mattermost.config']._login()
+                    mm_obj._delete("/v4/channels/"+self.mm_channel_id, data=payload)
+                    mm_obj.revoke_user_session()
+        #   if self.active and self.project_id.mm_channel_id:
+
+
+  #  def write(self, vals):
+  #      result = super().write(vals)
+  #      if 'active' in vals:
+            # Check if the project is being archived
+   #         if not vals['active'] and self.mm_channel_id:
+   #             payload = {
+                 
+    #            }
+    #            mm_obj = self.env['odoo_mattermost.config']._login()
+
+    #            mm_obj._delete("/v4/channels/"+self.mm_channel_id, data=payload)
+    #            mm_obj.revoke_user_session()
+        
+            
+    #    return result
+
+   # def write(self, vals):
+   #     result = super().write(vals)
+   #     if 'active' in vals:
+            # Check if the project is being archived
+   #         if  vals['active'] and self.mm_channel_id:
+   #             payload = {
+   #              
+   #             }
+   #             mm_obj = self.env['odoo_mattermost.config']._login()
+   #             mm_obj._delete("/v4/channels/"+self.mm_channel_id, data=payload)
+   #             mm_obj.revoke_user_session()
+
+            
+   #     return result        
     """
     rename
     """
     def check_visibility(self):
        
         visibility = self.privacy_visibility
-
+        print (visibility)
 
         if visibility == 'portal':
             """ potenziell ignorieren """
@@ -111,8 +179,10 @@ class odoo_mattermost_project(models.Model):
             return []
         elif visibility == 'followers':
            user_ids = self.allowed_internal_user_ids
+           print(user_ids)
            return user_ids
-           
+        else:
+           return []
           
     @api.model
     def mm_create_channel(self, ids):
@@ -123,21 +193,32 @@ class odoo_mattermost_project(models.Model):
         if project.mm_channel_id:
             return
         else:
-       
-            mm_obj = self.env['odoo_mattermost.config']._login()
-            team_id = self.env['odoo_mattermost.config']._get_mm_team_id()
-            channel = mm_obj.create_channel(team_id,str(hash(project.name)),project.name)
-            project.mm_channel_id = channel['id']
- 
-            pm_user = project.user_id.mm_user_id
             
-           
-            mm_obj.add_user_to_channel(channel['id'], pm_user)
-            for partner_id in self.check_visibility():
-                if partner_id.mm_user_id:
-                    mm_obj.add_user_to_channel(channel['id'], partner_id.mm_user_id)
-
-            mm_obj.revoke_user_session()
+            if project.name and project.user_id.mm_user_id:
+                
+                name = self.env['odoo_mattermost.config'].prepare_name(project.name)
+                mm_obj = self.env['odoo_mattermost.config']._login()
+             #   print (str(hash(project.name))+str(fields.datetime.now()))
+                
+                team_id = self.env['odoo_mattermost.config']._get_mm_team_id()
+                org_channel = False
+                try:
+                    org_channel = mm_obj.get_channel_by_name(team_id,name)
+                except:
+                    pass
+                if(org_channel):
+                   
+                    project.mm_channel_id = org_channel['id']
+                if not org_channel:
+                  
+                    channel = mm_obj.create_channel(team_id,name,project.name)
+                    project.mm_channel_id = channel['id']
+    
+                pm_user = project.user_id.mm_user_id
+                
+            
+                mm_obj.add_user_to_channel(project.mm_channel_id, pm_user)
+                mm_obj.revoke_user_session()
 
    
 
@@ -148,22 +229,6 @@ class ProjectTask(models.Model):
     _inherit = ['project.task']
     _auto_subscribe = True
 
-
-  
-    @api.model
-    def message_new(self, msg_dict, custom_values=None):
-        print(f"New comment added to task {msg_dict.get('res_id')}: {msg_dict.get('body')}")
-        if msg_dict.get('message_type') == 'comment':
-            # Triggered when a new comment is added to the chatter log of a task
-
-            # Access the message data using the `msg_dict` parameter
-            print(f"New comment added to task {msg_dict.get('res_id')}: {msg_dict.get('body')}")
-
-            # Do something with the message data
-            # For example, you could create a new record or trigger a notification
-
-        # Call super to continue the normal behavior of the method
-        #return super().message_new(msg_dict, custom_values)
 
     
     @api.model_create_multi
@@ -178,6 +243,7 @@ class ProjectTask(models.Model):
         return tasks
     
 
+
     
     @api.onchange('stage_id')
     def _on_state_change(self):
@@ -186,15 +252,3 @@ class ProjectTask(models.Model):
             self.env['odoo_mattermost.config'].create_msg(msg, self.project_id.mm_channel_id)
         pass
 
-class MyModel(models.Model):
-    _name = 'my.model'
-    
-
-    @api.model_create_single
-    def message_new(self, msg_dict, custom_values=None):
-        print('A new comment was added!')
-        if msg_dict.get('message_type') == 'comment':
-            # Your code here
-            print('A new comment was added!')
-
-        return super().message_new(msg_dict, custom_values)
