@@ -59,7 +59,7 @@ class odoo_mattermost_partner(models.Model):
         }
         mm_user = mm_obj._post("/v4/users",data=data)
       
-        self.mm_user_id = mm_user['id']
+        partner_id.mm_user_id = mm_user['id']
         mm_obj.revoke_user_session()
 
 
