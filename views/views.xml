@@ -15,32 +15,86 @@
     <field name="code">self.create_channel()</field>
 </record>
 -->
+<!--
 <record id="action_project_create_channel" model="ir.actions.server">
     <field name="name">Add Mattermost Channel</field>
     <field name="model_id" ref="project.model_project_project"/>
     <field name="state">code</field>
     <field name="binding_model_id" ref="project.model_project_project"/>
-     <field name="code">model.create_channel(context.get('active_id'))</field>
-         <field name="context">{'active_id': active_id}</field>
+     <field name="code">model.mm_create_channel()</field>
+    
 </record>
-
+-->
 
 
  <!---->
+ <!--
 <record id="view_project_form" model="ir.ui.view">
     <field name="name">project.form</field>
     <field name="model">project.project</field>
     <field name="inherit_id" ref="project.edit_project"/>
     <field name="arch" type="xml">
         <xpath expr="//header" position="inside">
-            <button name="%(action_project_create_channel)d"
-                    string="create Mattermost Channel for this project"
-                    type="action"
+            <xpath expr="//page[@name='internal_notes']" position="after">
+        <page name="accounts" string="Accounts">
+            <group>
+                <field name="mm_user_id"/>
+                         <button name="mm_create_user"
+                    string="create Mattermost User for this partner"
+                    type="object"
                     class="oe_highlight"/>
+            </group>
+   </page>
+        </xpath>
+                  
+                    <button name="mm_create_channel"
+                    string="create Mattermost Channel for this project"
+                    type="object"
+                    />
         </xpath>
     </field>
 </record>
-
+-->
+<record id="view_project_form_inherit" model="ir.ui.view">
+    <field name="name">project.form</field>
+    <field name="model">project.project</field>
+    <field name="inherit_id" ref="project.edit_project"/>
+    <field name="arch" type="xml">
+      
+            <xpath expr="//page[@name='settings']" position="after">
+        <page name="accounts" string="Accounts">
+            <group>
+                <field name="mm_channel_id"/>
+                    <button name="mm_create_channel"
+                    string="create Mattermost Channel for this project"
+                    type="object"
+                    />
+            </group>
+   </page>
+        </xpath>
+                  
+                 
+    </field>
+</record>
+ <!---->
+<record id="view_project_form" model="ir.ui.view">
+    <field name="name">lwm.view_partner_form</field>
+    <field name="model">res.partner</field>
+    <field name="inherit_id" ref="base.view_partner_form"/>
+    <field name="arch" type="xml">
+        <xpath expr="//page[@name='internal_notes']" position="after">
+        <page name="accounts" string="Accounts">
+            <group>
+                <field name="mm_user_id"/>
+                         <button name="mm_create_user"
+                    string="create Mattermost User for this partner"
+                    type="object"
+                    class="oe_highlight"/>
+            </group>
+   </page>
+        </xpath>
+    </field>
+</record>
 
     <!-- explicit list view definition -->
 <!--
